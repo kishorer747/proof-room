@@ -1,0 +1,10 @@
+{
+  "name": "lantern-bakery-sample-site",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "npm": "use-pnpm"
+  }
+}
