@@ -38,3 +38,12 @@ test('the client is in the client desk and not in the proof room', () => {
   assert.doesNotMatch(proof, /users:.*client_user/);
   assert.doesNotMatch(desk, /agents:.*(builder|verifier)/);
 });
+
+test('the only agent the client can address is not in the proof room', () => {
+  const proof = template.slice(template.indexOf('- name: "{team}-proof-room"'), template.indexOf('docs:'));
+  assert.doesNotMatch(proof, /agents:.*intake/);
+  const open = [...template.matchAll(/- name: "(\{team\}-[a-z]+)"[\s\S]*?addressing: (\S+)/g)]
+    .filter((m) => m[2] === 'anyone')
+    .map((m) => m[1]);
+  assert.deepEqual(open, ['{team}-intake']);
+});
