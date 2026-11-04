@@ -68,13 +68,29 @@ const server = createServer((req, res) => {
     return;
   }
 
-  const file = resolveFile(new URL(req.url, 'http://localhost').pathname);
-  if (!file) {
-    send(404, { 'Content-Type': 'text/plain; charset=utf-8' }, 'Not found\n');
+  const text = { 'Content-Type': 'text/plain; charset=utf-8' };
+  let pathname;
+  try {
+    pathname = new URL(req.url, 'http://localhost').pathname;
+  } catch {
+    send(400, text, 'Bad request\n');
     return;
   }
-  const type = TYPES[extname(file).toLowerCase()] ?? 'application/octet-stream';
-  send(200, { 'Content-Type': type }, readFileSync(file));
+
+  const file = resolveFile(pathname);
+  if (!file) {
+    send(404, text, 'Not found\n');
+    return;
+  }
+  // A publish can remove the file after resolveFile found it.
+  let body;
+  try {
+    body = readFileSync(file);
+  } catch {
+    send(404, text, 'Not found\n');
+    return;
+  }
+  send(200, { 'Content-Type': TYPES[extname(file).toLowerCase()] ?? 'application/octet-stream' }, body);
 });
 
 server.on('error', (err) => {
