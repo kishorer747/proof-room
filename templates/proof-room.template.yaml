@@ -5,8 +5,9 @@
 # client says to it can draw out what happens there. The dispatcher carries items across, and
 # the client cannot address it. Room membership and addressing are enforced by Switch. No
 # agent here has a shell: the builder publishes and the verifier fetches through one narrow
-# tool each, given by the .mcp.json in its own folder. What the agents' instructions ask of
-# them is convention. The README says which is which.
+# tool each, given by the .mcp.json in its own folder, and every agent's folder carries a
+# settings file that refuses the rest. What the agents' instructions ask of them is
+# convention. The README says which is which.
 version: 1
 
 params:
@@ -17,17 +18,9 @@ params:
   client_user:
     type: user
     description: The person playing the client, as the messaging app knows them
-  site_dir:
+  repo_dir:
     type: directory
-    description: Absolute path of this repo's sample-site folder. The builder works here.
-  verifier_dir:
-    type: directory
-    description: Absolute path of this repo's verifier folder. The verifier works here and cannot read the site's source.
-  directory:
-    type: directory
-    description: Working directory of the other agents, a folder of their own
-    default: "{$agents_dir}/{agent}"
-    input: advanced
+    description: Absolute path of this repository on the agents' machine. Each agent works in a folder inside it.
   location:
     type: location
     description: The machine all five run on
@@ -43,7 +36,7 @@ agents:
     description: Turns a client message into numbered checklist items
     provider: claude
     location: "{location}"
-    directory: "{directory}"
+    directory: "{repo_dir}/agents/intake"
     addressing: anyone
     instructions: |
       You are intake, in {team}-client-desk with the client. You cannot see the room
@@ -64,7 +57,7 @@ agents:
     description: Carries checklist items from the client desk to the proof room
     provider: claude
     location: "{location}"
-    directory: "{directory}"
+    directory: "{repo_dir}/agents/dispatcher"
     addressing: owner-agents
     instructions: |
       You are the dispatcher. You do one thing. When @{team}-intake posts checklist
@@ -78,7 +71,7 @@ agents:
     description: Changes the site and publishes it
     provider: claude
     location: "{location}"
-    directory: "{site_dir}"
+    directory: "{repo_dir}/sample-site"
     addressing: owner-agents
     instructions: |
       You are the builder. Your working directory is a small website. Edit files in
@@ -101,7 +94,7 @@ agents:
     description: Fetches the running page and posts the evidence block
     provider: claude
     location: "{location}"
-    directory: "{verifier_dir}"
+    directory: "{repo_dir}/verifier"
     addressing: owner-agents
     instructions: |
       You are the verifier. You never edit the site and you never take anyone's word
@@ -122,7 +115,7 @@ agents:
     description: Drafts the client update once a person has approved
     provider: claude
     location: "{location}"
-    directory: "{directory}"
+    directory: "{repo_dir}/agents/reporter"
     addressing: owner
     instructions: |
       You are the reporter. You act only when the owner tells you an item is approved.

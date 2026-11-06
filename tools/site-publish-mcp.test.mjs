@@ -61,3 +61,26 @@ test('lists one tool that takes no arguments and rejects unknown methods', async
 test('the default folder is this repo sample site', () => {
   assert.equal(existsSync(join(DEFAULT_SITE, 'publish.mjs')), true);
 });
+
+test('the seeded fault leaves one page stale once, then publishes normally', async () => {
+  writeFileSync(join(site, 'src', 'index.html'), '<p>old</p>');
+  writeFileSync(join(site, 'src', 'visit.html'), '<p>old</p>');
+  await publishSite(site);
+  writeFileSync(join(site, 'src', 'index.html'), '<p>new</p>');
+  writeFileSync(join(site, 'src', 'visit.html'), '<p>new</p>');
+
+  const state = { staleOnce: 'visit.html' };
+  const first = await handle({ method: 'tools/call', params: { name: 'publish' } }, site, state);
+  assert.match(first.content[0].text, /published 2 files/);
+  assert.equal(readFileSync(join(site, 'public', 'index.html'), 'utf8'), '<p>new</p>');
+  assert.equal(readFileSync(join(site, 'public', 'visit.html'), 'utf8'), '<p>old</p>', 'stale after the first publish');
+
+  await handle({ method: 'tools/call', params: { name: 'publish' } }, site, state);
+  assert.equal(readFileSync(join(site, 'public', 'visit.html'), 'utf8'), '<p>new</p>', 'fresh after the second');
+});
+
+test('without the seeded fault every page is published', async () => {
+  writeFileSync(join(site, 'src', 'visit.html'), '<p>newer</p>');
+  await handle({ method: 'tools/call', params: { name: 'publish' } }, site);
+  assert.equal(readFileSync(join(site, 'public', 'visit.html'), 'utf8'), '<p>newer</p>');
+});

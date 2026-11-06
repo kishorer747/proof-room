@@ -31,14 +31,14 @@ const agent = (name, next) =>
 test('only the verifier is told how to fetch, from a folder of its own', () => {
   const verifier = agent('verifier', 'reporter');
   assert.match(verifier, /fetch_page/);
-  assert.match(verifier, /directory: "\{verifier_dir\}"/);
+  assert.match(verifier, /directory: "\{repo_dir\}\/verifier"/);
   assert.doesNotMatch(template.replace(verifier, ''), /fetch_page/);
 });
 
 test('only the builder is told to publish, and it works in the site folder', () => {
   const builder = agent('builder', 'verifier');
   assert.match(builder, /publish tool/);
-  assert.match(builder, /directory: "\{site_dir\}"/);
+  assert.match(builder, /directory: "\{repo_dir\}\/sample-site"/);
   assert.doesNotMatch(template.replace(builder, ''), /publish tool/);
 });
 
@@ -67,4 +67,49 @@ test('the only agent the client can address is not in the proof room', () => {
     .filter((m) => m[2] === 'anyone')
     .map((m) => m[1]);
   assert.deepEqual(open, ['{team}-intake']);
+});
+
+const settings = (rel) => JSON.parse(read(rel)).permissions;
+const folders = {
+  intake: '../agents/intake',
+  dispatcher: '../agents/dispatcher',
+  reporter: '../agents/reporter',
+  builder: '../sample-site',
+  verifier: '../verifier',
+};
+
+test('every agent runs in a folder of this repo that has a settings file', () => {
+  for (const [name, folder] of Object.entries(folders)) {
+    assert.match(template, new RegExp(`directory: "\\{repo_dir\\}/${folder.slice(3)}"`), name);
+    assert.ok(settings(`${folder}/.claude/settings.json`), name);
+  }
+});
+
+test('no folder allows a shell, the web, sub-agents or the tools that manage Switch', () => {
+  const never = ['Bash', 'WebFetch', 'WebSearch', 'Agent', 'mcp__switch__create_agent', 'mcp__switch__create_room', 'mcp__switch__add_users_to_room', 'mcp__switch__archive_room', 'mcp__switch__run_template'];
+  const files = [...Object.values(folders).map((f) => `${f}/.claude/settings.json`), '../docs/claude-settings.example.json'];
+  for (const file of files) {
+    const { deny, blockReadsOutsideWorkingDirectories } = settings(file);
+    for (const tool of never) assert.ok(deny.includes(tool), `${file} must deny ${tool}`);
+    assert.equal(blockReadsOutsideWorkingDirectories, true, file);
+  }
+});
+
+test('only the builder can change files, and not the ones the site runs on', () => {
+  for (const name of ['intake', 'dispatcher', 'reporter', 'verifier']) {
+    const { deny } = settings(`${folders[name]}/.claude/settings.json`);
+    assert.ok(deny.includes('Edit') && deny.includes('Write'), name);
+  }
+  const { deny } = settings('../sample-site/.claude/settings.json');
+  assert.ok(!deny.includes('Edit') && !deny.includes('Write'));
+  for (const file of ['publish.mjs', 'server.mjs', '.mcp.json', '.claude/**', 'public/**']) {
+    assert.ok(deny.includes(`Edit(./${file})`) && deny.includes(`Write(./${file})`), file);
+  }
+});
+
+test('the user settings name the two folder tools and nothing wider', () => {
+  const example = JSON.parse(read('../docs/claude-settings.example.json'));
+  assert.deepEqual(example.enabledMcpjsonServers, ['page_fetch', 'site_publish']);
+  assert.deepEqual(example.permissions.allow, ['mcp__page_fetch__fetch_page', 'mcp__site_publish__publish']);
+  assert.equal(example.enableAllProjectMcpServers, undefined);
 });
