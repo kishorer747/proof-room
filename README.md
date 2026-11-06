@@ -14,7 +14,7 @@ The whole deployment is one file, `templates/proof-room.template.yaml`. Applying
 |---|---|---|---|---|
 | `{team}-intake` | `anyone` | client-desk | `<repo>/agents/intake` | none |
 | `{team}-dispatcher` | `owner-agents` | client-desk, proof-room | `<repo>/agents/dispatcher` | none |
-| `{team}-builder` | `owner-agents` | proof-room | `<repo>/sample-site` | `publish` |
+| `{team}-builder` | `owner-agents` | proof-room | `<repo>/sample-site` | `replace_text`, `publish` |
 | `{team}-verifier` | `owner-agents` | proof-room | `<repo>/verifier` | `fetch_page` |
 | `{team}-reporter` | `owner` | client-desk, proof-room | `<repo>/agents/reporter` | none |
 
@@ -27,7 +27,7 @@ All five use `provider: claude`. The owner is the person who applies the templat
 - **Room instructions and kickoff (`instructions:`, `kickoff:`).** Each room has its own instructions. client-desk has a kickoff that asks intake to greet the client.
 - **Link (`links:`).** One link runs from client-desk to proof-room, labelled `proof`. It declares that the first room hands work to the second. Messages are carried by the dispatcher and the reporter, not by the link. A link does show the linked room's name and description to the other side (`docs/switch-notes.md`).
 - **Bridge and channel type (`bridge:`, `channel_type:`).** Each room is mirrored to the connected messaging app through the `bridge` param, which defaults to `[$first]`. Both rooms set `channel_type: channel_private`.
-- **Folders (`directory:`).** Every agent's `directory` is a folder of this repo, built from the `repo_dir` param. Each folder holds a `.claude/settings.json` that limits the agent working there. The builder's and the verifier's folders also hold a `.mcp.json` that gives each its one tool.
+- **Folders (`directory:`).** Every agent's `directory` is a folder of this repo, built from the `repo_dir` param. Each folder holds a `.claude/settings.json` that limits the agent working there. The builder's and the verifier's folders also hold a `.mcp.json` that gives each its own tools: two for the builder, one for the verifier.
 - **Params (`params:`).** The wizard asks for `team`, `client_user` and `repo_dir`. `location` and `bridge` have defaults.
 
 What Switch does not do here: it does not check what an evidence block says, and it does not sandbox the agents. The first is the verifier's job and then a person's. The second is done with a settings file, described under Safety.
@@ -38,7 +38,7 @@ What Switch does not do here: it does not check what an evidence block says, and
  client-desk                                 proof-room
  -----------                                 ----------
  people:  client, owner                      people:  owner
- agents:  intake                             agents:  builder    sample-site/  tool: publish
+ agents:  intake                             agents:  builder    sample-site/  tools: replace_text, publish
           dispatcher  ---- same agent ----            dispatcher
           reporter    ---- same agent ----            reporter
                                                       verifier   verifier/     tool: fetch_page
@@ -94,7 +94,7 @@ Kind says what is meant to hold the rule. Evidence says whether it has been seen
 | The verifier cannot read the site's source and has no tool that edits or writes files | settings enforce | boundary |
 | The verifier reaches the site only through `fetch_page`: GET, 127.0.0.1, one port, no redirects | settings enforce, with the tool's code | repo tests; boundary; both rehearsals |
 | The builder publishes only through `publish`, which takes no arguments | settings enforce, with the tool's code | repo tests; boundary; both rehearsals |
-| The builder cannot edit `publish.mjs`, `server.mjs`, `public/`, `.mcp.json` or `.claude/` | settings enforce | pending: `docs/evidence/bypass-attempts.md` |
+| The builder has no general tool for writing files. It changes text only through `replace_text`, which reaches existing files directly inside `src/` and nothing else | settings enforce, with the tool's code | repo tests; boundary (third team). Before this change its file tools could write elsewhere in the repo |
 | The builder says "ready for verification", never done | convention | pass rehearsal, reject rehearsal; recorded run pending |
 | The verifier posts blocks in the exact format | convention | notes (i); PASS blocks in both rehearsals, one REJECT block with its reason in the reject rehearsal |
 | The reporter counts only blocks posted by the verifier | convention | pending: `docs/evidence/bypass-attempts.md`. Whether an agent can see who posted is not tested |
@@ -146,7 +146,7 @@ Written for someone who has not used Switch before. Tested with Switch Console 0
    - `client_user`: the person playing the client, as the messaging app knows them.
    - `repo_dir`: the absolute path of this repository on the machine the agents run on.
 
-   Each agent works in a folder inside the repo (`agents/intake`, `agents/dispatcher`, `agents/reporter`, `sample-site`, `verifier`). Those folders hold the `.claude/settings.json` that limits each agent and, for the builder and verifier, the `.mcp.json` that gives it one tool. Then choose Create all. It is all or nothing: a failed Create reports "Nothing was created".
+   Each agent works in a folder inside the repo (`agents/intake`, `agents/dispatcher`, `agents/reporter`, `sample-site`, `verifier`). Those folders hold the `.claude/settings.json` that limits each agent and, for the builder and verifier, the `.mcp.json` that gives it its tools. Then choose Create all. It is all or nothing: a failed Create reports "Nothing was created".
 8. **Check before you trust it.** You should see five agents and two rooms. In proof-room, ask the verifier to list its tools. It should report `fetch_page`, no shell and no web tool. If it reports a shell, the settings are not in force. Stop and fix step 4.
 
 A room mirrored to Discord has no message box in Console, only "Open in Discord". Type in Discord.
@@ -170,7 +170,7 @@ A seeded run is a staged failure. It must be labelled as seeded wherever it is s
 - **Agents run as your user.** There is no OS sandbox. Claude Code's own sandbox setting stalled agents started by Console, so it is not used.
 - **Why no shell.** The boundary is the settings files: no shell, no web tools, no reads outside the working folder, no connector tools. With a shell, an agent could read your home folder and reach the internet. That was observed before the settings were applied.
 - **The settings files are what the claims depend on.** There are two layers: `.claude/settings.json` in each agent's folder, and `settings.json` in the dedicated config directory. A "settings enforce" row is void if an agent runs in a different folder, and the connector tools come back if it runs under a different config directory. Do the check in Setup step 8 each time.
-- **Each agent's one tool is narrow.** `fetch_page` can only GET the sample site on 127.0.0.1 and one port. `publish` takes no arguments and runs only the site's `publish.mjs`.
+- **Each tool is narrow.** `fetch_page` can only GET the sample site on 127.0.0.1 and one port. `replace_text` can only change an existing file directly inside `src/`. `publish` takes no arguments and runs only the site's `publish.mjs`.
 - **Do not admit strangers.** Intake is set to answer anyone in client-desk. How the agents handle a hostile message is convention and is not tested yet. Use a client you know, on a machine you can afford to expose.
 
 Still open:
@@ -178,7 +178,7 @@ Still open:
 - Every agent was seen to carry Switch's own 59 tools, including ones that create agents and rooms and add people to rooms. The settings files now deny the ones that manage agents, rooms and templates, and the builder and verifier report 18 tools left. An attempt to call a denied one has not been tried.
 - An agent that is not in a room can still list it by name, and the link shows proof-room's name and description to client-desk. The client can learn that the room exists.
 - Whether `channel_private` closes the Discord channels is not tested. Without `channel_type` they were public.
-- Reads outside the working folder are refused. Whether the builder's edit tools can write outside `sample-site/` is not tested.
+- The seeded stale publish does not always produce a rejection. The builder can read `public/` in its own folder, and in one rehearsal it noticed the stale page and published again before handing over.
 - Whether an agent can tell who posted a message is not tested. The reporter's check depends on it.
 
 ## Limits
@@ -195,7 +195,7 @@ Still open:
 node --test "templates/*.test.mjs" "tools/*.test.mjs"
 ```
 
-25 tests passed on 2026-11-06. They check the template's text (the room document matches the protocol file, the client is in client-desk and not in proof-room, only the verifier is told how to fetch), the settings files (every agent's folder has one, none allows a shell, the web or the Switch management tools, only the builder can change files) and the two tools (a path cannot leave the site's origin, redirects are not followed, a call cannot choose the port, the folder or the script, and the seeded fault leaves one page stale exactly once). They do not apply the template. Applying it in Console is the real test.
+29 tests passed on 2026-11-06. They check the template's text (the room document matches the protocol file, the client is in client-desk and not in proof-room, only the verifier is told how to fetch), the settings files (every agent's folder has one, none allows a shell, the web or the Switch management tools, only the builder can change files) and the two tools (a path cannot leave the site's origin, redirects are not followed, a call cannot choose the port, the folder or the script, `replace_text` cannot reach a file outside `src/`, and the seeded fault leaves one page stale exactly once). They do not apply the template. Applying it in Console is the real test.
 
 ## Licence
 

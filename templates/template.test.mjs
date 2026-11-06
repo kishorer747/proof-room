@@ -95,21 +95,22 @@ test('no folder allows a shell, the web, sub-agents or the tools that manage Swi
   }
 });
 
-test('only the builder can change files, and not the ones the site runs on', () => {
-  for (const name of ['intake', 'dispatcher', 'reporter', 'verifier']) {
-    const { deny } = settings(`${folders[name]}/.claude/settings.json`);
-    assert.ok(deny.includes('Edit') && deny.includes('Write'), name);
-  }
-  const { deny } = settings('../sample-site/.claude/settings.json');
-  assert.ok(!deny.includes('Edit') && !deny.includes('Write'));
-  for (const file of ['publish.mjs', 'server.mjs', '.mcp.json', '.claude/**', 'public/**']) {
-    assert.ok(deny.includes(`Edit(./${file})`) && deny.includes(`Write(./${file})`), file);
+test('no agent has a general tool for writing files', () => {
+  for (const [name, folder] of Object.entries(folders)) {
+    const { deny } = settings(`${folder}/.claude/settings.json`);
+    assert.ok(deny.includes('Edit') && deny.includes('Write') && deny.includes('NotebookEdit'), name);
   }
 });
 
-test('the user settings name the two folder tools and nothing wider', () => {
+test('only the builder is told how to change a page', () => {
+  const builder = agent('builder', 'verifier');
+  assert.match(builder, /replace_text/);
+  assert.doesNotMatch(template.replace(builder, ''), /replace_text/);
+});
+
+test('the user settings name the folder tools exactly and nothing wider', () => {
   const example = JSON.parse(read('../docs/claude-settings.example.json'));
   assert.deepEqual(example.enabledMcpjsonServers, ['page_fetch', 'site_publish']);
-  assert.deepEqual(example.permissions.allow, ['mcp__page_fetch__fetch_page', 'mcp__site_publish__publish']);
+  assert.deepEqual(example.permissions.allow, ['mcp__page_fetch__fetch_page', 'mcp__site_publish__replace_text', 'mcp__site_publish__publish']);
   assert.equal(example.enableAllProjectMcpServers, undefined);
 });

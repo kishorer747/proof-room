@@ -1,16 +1,17 @@
 #!/usr/bin/env node
-// MCP server with one tool: publish the sample site, as the builder's way to make a change live.
+// MCP server with the builder's two tools: change text in a source page, and publish the site.
 //   node site-publish-mcp.mjs [--site DIR] [--stale-once FILE]
 //
-// The builder has no shell. It edits files in src/ with its file tools, and this is the only
-// thing it can run: the site's own publish.mjs, in the site folder. The folder comes from the
-// person starting the server, never from the agent asking, and the tool takes no arguments.
+// The builder has no shell and no general tool for writing files. replace_text changes one
+// existing file directly inside src/ and nothing else: no folders, no new files, no links.
+// publish runs the site's own publish.mjs and takes no arguments. The site folder comes from
+// the person starting the server, never from the agent asking.
 //
 // --stale-once FILE is for the seeded reject scenario only. The first publish leaves that one
 // file in public/ as it was, the way a cached or partial deploy does, and still reports
 // success. Later publishes are normal. The builder is not told. See scenarios/reject.md.
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -49,6 +50,46 @@ function runPublish(script, siteDir) {
   });
 }
 
+const MAX_SOURCE_BYTES = 200_000;
+
+// Replaces text in one existing regular file directly inside siteDir/src. The name must be a
+// bare file name, so no path can leave src/. `find` must occur exactly once unless all is set.
+export function replaceText(siteDir, { file, find, replace, all }) {
+  if (typeof file !== 'string' || file === '' || file !== basename(file) || file.startsWith('.')) {
+    throw new Error('file must be the name of a file in src/, with no folder');
+  }
+  if (typeof find !== 'string' || find === '') throw new Error('find must be non-empty text');
+  if (typeof replace !== 'string') throw new Error('replace must be text');
+  const path = join(siteDir, 'src', file);
+  if (!existsSync(path)) throw new Error(`no such file in src/: ${file}`);
+  if (!lstatSync(path).isFile()) throw new Error(`not a regular file: ${file}`);
+  const before = readFileSync(path, 'utf8');
+  const count = before.split(find).length - 1;
+  if (count === 0) throw new Error(`text not found in ${file}`);
+  if (count > 1 && all !== true) throw new Error(`text occurs ${count} times in ${file}: set all to true, or give more context`);
+  const after = before.split(find).join(replace);
+  if (Buffer.byteLength(after) > MAX_SOURCE_BYTES) throw new Error('result is too large');
+  writeFileSync(path, after);
+  return `replaced ${count} occurrence${count === 1 ? '' : 's'} in src/${file}`;
+}
+
+const REPLACE_TOOL = {
+  name: 'replace_text',
+  description: 'Replace text in one existing page of src/. Nothing is live until publish runs.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      file: { type: 'string', description: 'File name in src/, such as visit.html. No folders.' },
+      find: { type: 'string', description: 'Exact text to replace' },
+      replace: { type: 'string', description: 'Text to put in its place' },
+      all: { type: 'boolean', description: 'Replace every occurrence. Without it, find must occur exactly once.' },
+    },
+    required: ['file', 'find', 'replace'],
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+};
+
 const TOOL = {
   name: 'publish',
   description: 'Copy src/ to public/ so the running site shows the current source. Takes no arguments.',
@@ -67,8 +108,15 @@ export async function handle(msg, siteDir, state = {}) {
     };
   }
   if (method === 'ping') return {};
-  if (method === 'tools/list') return { tools: [TOOL] };
+  if (method === 'tools/list') return { tools: [REPLACE_TOOL, TOOL] };
   if (method === 'tools/call') {
+    if (params?.name === REPLACE_TOOL.name) {
+      try {
+        return { content: [{ type: 'text', text: replaceText(siteDir, params.arguments ?? {}) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: `replace failed: ${err.message}` }], isError: true };
+      }
+    }
     if (params?.name !== TOOL.name) throw Object.assign(new Error('unknown tool'), { code: -32602 });
     try {
       const text = await publishSite(siteDir, state.staleOnce);

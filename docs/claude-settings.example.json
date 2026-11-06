@@ -71,6 +71,7 @@
     ],
     "allow": [
       "mcp__page_fetch__fetch_page",
+      "mcp__site_publish__replace_text",
       "mcp__site_publish__publish"
     ]
   },
