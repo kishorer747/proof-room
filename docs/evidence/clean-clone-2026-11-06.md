@@ -34,7 +34,10 @@ holds the shipped file, so later runs use what a newcomer gets.
 | 5, publish | `node publish.mjs`: 3 files to `sample-site/public/` |
 | Tests | `node --test "templates/*.test.mjs" "tools/*.test.mjs"`: 30 pass, 0 fail |
 
+| 5, server | The earlier site process had exited; `node server.mjs --port 4180` started from the clone's `sample-site/`, title "Lantern Bakery" |
+| 6, import | The clone's `templates/proof-room.template.yaml` imported through Import template, saved as "Proof room clean clone" (private) |
+| 7, wizard | `team` = `cc1`, `repo_dir` = the clone. The preview listed every agent folder under the clone. Create all: 5 agents (`cc1-intake`, `-dispatcher`, `-builder`, `-verifier`, `-reporter`), "2 rooms created" |
+
 ## Not yet done from the clone
 
-Steps 6 to 8: importing the template in Console, the wizard with `repo_dir` pointing at the clone,
-Create all, and the step 8 tool check from a Console-started verifier.
+Step 8: asking `cc1-verifier` for its tool list from Console. Then one pass run on `cc1`.
