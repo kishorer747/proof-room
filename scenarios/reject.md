@@ -27,19 +27,25 @@ Both responses contain `Whole cakes need 72 hours' notice.` and neither contains
 
 ## Run it unseeded first
 
-Give the builder the client's message as it is. A careful builder will search `src` and change both pages. That run ends in PASS, and it should be recorded as what it is. It does not demonstrate a rejection.
+Give intake the client's message as it is. A careful builder will search `src` and change both pages. That run ends in PASS, and it should be recorded as what it is. It does not demonstrate a rejection.
 
-## Seeded variant
+Telling the builder to change only the home page does not help either. In rehearsal the builder followed the checklist item, changed both pages, and said so.
 
-If the builder gets both pages right every time, seed the failure. The client's message and the checklist item stay the same, but the brief passed to the builder mentions one page:
+## Seeded variant: a stale publish
 
-> Update the whole-cake notice on the home page: 72 hours, not 48.
+The failure worth showing is the one only the running page reveals: the source is right and the site is not. Stage it in the publish step. Before the run, add two arguments to the builder's tool in `sample-site/.mcp.json`, then restart the builder agent so its tool starts again:
+
+```
+"args": ["../tools/site-publish-mcp.mjs", "--stale-once", "visit.html"]
+```
+
+The first publish then leaves `public/visit.html` as it was, the way a cached or partial deploy does, and still reports success. Later publishes are normal. The builder is not told. Put the file back afterwards with `git checkout -- sample-site/.mcp.json`.
 
 Expected run:
 
-1. The builder changes `index.html`, publishes, and says it is ready for verification.
-2. The verifier checks the checklist item against both pages, not against the brief.
-3. `visit.html` still contains `Whole cakes need 48 hours' notice.`, so the evidence block says `VERDICT: REJECT`, quotes that text in `FOUND`, and gives the reason in `REASON`.
-4. The builder fixes `visit.html` and publishes again. The verifier fetches both pages again, and this time PASS.
+1. The builder changes both pages, publishes, and says it is ready for verification.
+2. The verifier fetches both pages. `index.html` passes. `visit.html` still contains `Whole cakes need 48 hours' notice.`, so its block says `VERDICT: REJECT`, quotes that text in `FOUND`, and gives the reason in `REASON`.
+3. The builder publishes again. The verifier fetches both pages again, and this time PASS.
+4. A named person approves, and the reporter tells the client. The client desk never shows the rejection.
 
-A seeded run is a staged failure. Label it as seeded in the README and in its evidence transcript, and never present it as a mistake the builder made unaided.
+A seeded run is a staged failure. Label it as seeded in the README, in its evidence transcript and in any video, and never present it as a mistake the builder made unaided.
