@@ -75,6 +75,7 @@ Kind says what is meant to hold the rule. Evidence says whether it has been seen
 - `notes (x)` is a row in `docs/switch-notes.md`, from an earlier trial setup on 2026-11-05.
 - `boundary` is `docs/evidence/agent-boundary-2026-11-06.md`: what agents started by Console could and could not reach, on Switch Console 0.40.1 and Claude Code 2.1.311.
 - `pass rehearsal` and `reject rehearsal` are the two files in `docs/evidence/` named above: runs driven from the owner's Console chat with no separate client. The rejection is seeded.
+- `seeded reject rehearsal` is `docs/evidence/rehearsal-reject-seeded-2026-11-06.md`: three seeded runs on two new teams after the builder's settings changed.
 - `pending` has not been observed.
 
 | Rule | Kind | Evidence |
@@ -95,6 +96,7 @@ Kind says what is meant to hold the rule. Evidence says whether it has been seen
 | The verifier reaches the site only through `fetch_page`: GET, 127.0.0.1, one port, no redirects | settings enforce, with the tool's code | repo tests; boundary; both rehearsals |
 | The builder publishes only through `publish`, which takes no arguments | settings enforce, with the tool's code | repo tests; boundary; both rehearsals |
 | The builder has no general tool for writing files. It changes text only through `replace_text`, which reaches existing files directly inside `src/` and nothing else | settings enforce, with the tool's code | repo tests; boundary (third team). Before this change its file tools could write elsewhere in the repo |
+| The builder cannot read the published copy in `public/`. Only the verifier sees the running site | settings enforce | seeded reject rehearsal: Grep and Read refused for a builder started by Console |
 | The builder says "ready for verification", never done | convention | pass rehearsal, reject rehearsal; recorded run pending |
 | The verifier posts blocks in the exact format | convention | notes (i); PASS blocks in both rehearsals, one REJECT block with its reason in the reject rehearsal |
 | The reporter counts only blocks posted by the verifier | convention | pending: `docs/evidence/bypass-attempts.md`. Whether an agent can see who posted is not tested |
@@ -178,7 +180,7 @@ Still open:
 - Every agent was seen to carry Switch's own 59 tools, including ones that create agents and rooms and add people to rooms. The settings files now deny the ones that manage agents, rooms and templates, and the builder and verifier report 18 tools left. An attempt to call a denied one has not been tried.
 - An agent that is not in a room can still list it by name, and the link shows proof-room's name and description to client-desk. The client can learn that the room exists.
 - Whether `channel_private` closes the Discord channels is not tested. Without `channel_type` they were public.
-- The seeded stale publish does not always produce a rejection. The builder can read `public/` in its own folder, and in one rehearsal it noticed the stale page and published again before handing over.
+- The seeded stale publish has produced a rejection in three runs out of three since the builder's settings began refusing reads of `public/` (`docs/evidence/rehearsal-reject-seeded-2026-11-06.md`). Before that, in one rehearsal the builder read the published copy, noticed the stale page and published again before handing over. Three runs is a small number.
 - Whether an agent can tell who posted a message is not tested. The reporter's check depends on it.
 
 ## Limits
@@ -195,7 +197,7 @@ Still open:
 node --test "templates/*.test.mjs" "tools/*.test.mjs"
 ```
 
-29 tests passed on 2026-11-06. They check the template's text (the room document matches the protocol file, the client is in client-desk and not in proof-room, only the verifier is told how to fetch), the settings files (every agent's folder has one, none allows a shell, the web or the Switch management tools, only the builder can change files) and the two tools (a path cannot leave the site's origin, redirects are not followed, a call cannot choose the port, the folder or the script, `replace_text` cannot reach a file outside `src/`, and the seeded fault leaves one page stale exactly once). They do not apply the template. Applying it in Console is the real test.
+30 tests passed on 2026-11-06. They check the template's text (the room document matches the protocol file, the client is in client-desk and not in proof-room, only the verifier is told how to fetch), the settings files (every agent's folder has one, none allows a shell, the web or the Switch management tools, only the builder can change files, the builder cannot read `public/`) and the two tools (a path cannot leave the site's origin, redirects are not followed, a call cannot choose the port, the folder or the script, `replace_text` cannot reach a file outside `src/`, and the seeded fault leaves one page stale exactly once). They do not apply the template. Applying it in Console is the real test.
 
 ## Licence
 

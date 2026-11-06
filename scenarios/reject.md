@@ -39,7 +39,7 @@ The failure worth showing is the one only the running page reveals: the source i
 "args": ["../tools/site-publish-mcp.mjs", "--stale-once", "visit.html"]
 ```
 
-The first publish then leaves `public/visit.html` as it was, the way a cached or partial deploy does, and still reports success. Later publishes are normal. The builder is not told. Put the file back afterwards with `git checkout -- sample-site/.mcp.json`.
+The first publish then leaves `public/visit.html` as it was, the way a cached or partial deploy does, and still reports success. Later publishes are normal. The builder is not told, and it cannot look: its settings refuse reads of `public/`, so only the verifier's fetch shows the stale page. Put the file back afterwards with `git checkout -- sample-site/.mcp.json`.
 
 Expected run:
 

@@ -25,6 +25,7 @@
       "ReportFindings",
       "Edit",
       "Write",
+      "Read(./public/**)",
       "mcp__switch__add_users_to_room",
       "mcp__switch__archive_room",
       "mcp__switch__unarchive_room",

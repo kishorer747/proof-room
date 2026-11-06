@@ -102,6 +102,11 @@ test('no agent has a general tool for writing files', () => {
   }
 });
 
+test('the builder cannot read the published copy, only the verifier sees the running site', () => {
+  const { deny } = settings('../sample-site/.claude/settings.json');
+  assert.ok(deny.includes('Read(./public/**)'), 'sample-site must deny reads of public/');
+});
+
 test('only the builder is told how to change a page', () => {
   const builder = agent('builder', 'verifier');
   assert.match(builder, /replace_text/);
