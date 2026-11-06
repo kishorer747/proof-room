@@ -57,7 +57,6 @@ The owner and the client were the same person in both. A client who is a differe
 
 ## Not covered
 
-- A call to `replace_text` with a path outside `src/` from a live builder (the repo tests cover it).
-- Hostile messages from a client, and attempts to get round the PASS rule.
+- Hostile messages and attempts to get round the PASS rule typed by a separate client. The owner-relayed runs are in `hostile-2026-11-06.md` and `bypass-2026-11-06.md`.
 - Whether `channel_private` closes the channels in the messaging app.
 - Any machine but the author's.

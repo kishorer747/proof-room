@@ -77,7 +77,7 @@ Every claim in the narration, and the file that will hold its evidence. All are 
 | 6 | The second fetch gives PASS on every block | `docs/evidence/reject-run.md` | pending |
 | 6 | The verifier asks the owner to approve | `docs/evidence/reject-run.md` | pending |
 | 7 | A person typed the approval | `docs/evidence/reject-run.md` | pending |
-| 7 | The reporter acts only on the owner's own message | `docs/evidence/bypass-attempts.md` | pending |
+| 7 | The reporter acts only on the owner's own message | `docs/evidence/bypass-2026-11-06.md` | partly: two agents asked to push the reporter refused; the reporter itself was not reached |
 | 8 | The client update comes after the approval | `docs/evidence/reject-run.md` | pending |
 | 8 | The update says only what the PASS blocks show and mentions no rejection | `docs/evidence/reject-run.md` | pending |
 | 9 | Rooms and membership are enforced by Switch | `docs/switch-notes.md` rows (c), (d), (f) for agents; `docs/evidence/second-person.md` for people | pending |

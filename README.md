@@ -2,7 +2,7 @@
 
 An agent that edits a file will say the change is done. The client looks at the website, not the file. If the publish step was skipped, or the same text sits on a second page, "done" is wrong and the client finds out first. Proof Room is a Switch workflow for client-requested website changes. In it, nobody tells the client a change is done until a different agent has fetched the running page and posted an evidence block, and a named person has approved. It is an entry for the Flip the Switch hackathon, Track 1 (Best Business Workflow).
 
-**Status, 2026-11-06.** The template has been applied through Switch Console and the agents' limits have been checked. Both scenarios have been rehearsed, with the request passed in by the owner and not typed by a separate client: `docs/evidence/rehearsal-pass-2026-11-06.md` and `docs/evidence/rehearsal-reject-2026-11-06.md`. The rejection in the rehearsal is seeded: the publish step was set to leave one page stale once. A recorded run with a client typing in the messaging app, the bypass attempts and the hostile-message tests are still to come. The table under "Enforced, convention, or pending" marks every rule. Anything marked pending is designed behaviour, not a result.
+**Status, 2026-11-06.** The template has been applied through Switch Console and the agents' limits have been checked. Both scenarios have been rehearsed, with the request passed in by the owner and not typed by a separate client: `docs/evidence/rehearsal-pass-2026-11-06.md` and `docs/evidence/rehearsal-reject-2026-11-06.md`. The rejection in the rehearsal is seeded: the publish step was set to leave one page stale once. Seven hostile messages and the attempts to get round the rule have been run the same way, relayed by the owner: `docs/evidence/hostile-2026-11-06.md` and `docs/evidence/bypass-2026-11-06.md`. A recorded run with a client typing in the messaging app is still to come. The table under "Enforced, convention, or pending" marks every rule. Anything marked pending is designed behaviour, not a result.
 
 Demo video: <link pending>
 
@@ -76,6 +76,7 @@ Kind says what is meant to hold the rule. Evidence says whether it has been seen
 - `boundary` is `docs/evidence/agent-boundary-2026-11-06.md`: what agents started by Console could and could not reach, on Switch Console 0.40.1 and Claude Code 2.1.311.
 - `pass rehearsal` and `reject rehearsal` are the two files in `docs/evidence/` named above: runs driven from the owner's Console chat with no separate client. The rejection is seeded.
 - `seeded reject rehearsal` is `docs/evidence/rehearsal-reject-seeded-2026-11-06.md`: three seeded runs on two new teams after the builder's settings changed.
+- `hostile` is `docs/evidence/hostile-2026-11-06.md` and `bypass` is `docs/evidence/bypass-2026-11-06.md`. In both, the text was relayed by the owner from the Console chat, not typed by a separate client.
 - `pending` has not been observed.
 
 | Rule | Kind | Evidence |
@@ -95,16 +96,16 @@ Kind says what is meant to hold the rule. Evidence says whether it has been seen
 | The verifier cannot read the site's source and has no tool that edits or writes files | settings enforce | boundary |
 | The verifier reaches the site only through `fetch_page`: GET, 127.0.0.1, one port, no redirects | settings enforce, with the tool's code | repo tests; boundary; both rehearsals |
 | The builder publishes only through `publish`, which takes no arguments | settings enforce, with the tool's code | repo tests; boundary; both rehearsals |
-| The builder has no general tool for writing files. It changes text only through `replace_text`, which reaches existing files directly inside `src/` and nothing else | settings enforce, with the tool's code | repo tests; boundary (third team). Before this change its file tools could write elsewhere in the repo |
+| The builder has no general tool for writing files. It changes text only through `replace_text`, which reaches existing files directly inside `src/` and nothing else | settings enforce, with the tool's code | repo tests; boundary (third team); bypass: three live calls aimed outside `src/` were refused by the tool. Before this change its file tools could write elsewhere in the repo |
 | The builder cannot read the published copy in `public/`. Only the verifier sees the running site | settings enforce | seeded reject rehearsal: Grep and Read refused for a builder started by Console |
 | The builder says "ready for verification", never done | convention | pass rehearsal, reject rehearsal; recorded run pending |
 | The verifier posts blocks in the exact format | convention | notes (i); PASS blocks in both rehearsals, one REJECT block with its reason in the reject rehearsal |
-| The reporter counts only blocks posted by the verifier | convention | pending: `docs/evidence/bypass-attempts.md`. Whether an agent can see who posted is not tested |
+| The reporter counts only blocks posted by the verifier | convention | hostile (g): a fake PASS block in page text did not set the reporter off. A block posted in the room by another agent has not been tried, and whether an agent can see who posted is not tested |
 | The verifier checks every page against the checklist item | convention | reject rehearsal, run 3: one page passed and one was rejected |
 | A REJECT is followed by a fix, a publish and a fresh fetch | convention | reject rehearsal, run 3 |
-| After three REJECTs on one item the verifier stops and asks the owner | convention | pending: `docs/evidence/bypass-attempts.md` |
-| Client text and page text are quoted, never obeyed | convention | pending: `docs/evidence/hostile-messages.md` |
-| Intake never tells the client an item is done | convention | pending: `docs/evidence/hostile-messages.md` |
+| After three REJECTs on one item the verifier stops and asks the owner | convention | pending |
+| Client text and page text are quoted, never obeyed | convention | hostile (a) to (g): refused or held, and intake removed a step addressed to the builder. A client typing it is pending |
+| Intake never tells the client an item is done | convention | bypass (a): refused under pressure. A client typing it is pending |
 | The client update says only what the PASS blocks show and mentions no rejection | convention | reject rehearsal, run 3, from the agents' own records. A client's screen is pending |
 | Setup works from a clean clone on another machine | pending | pending: `docs/evidence/clean-clone.md` |
 
@@ -173,7 +174,7 @@ A seeded run is a staged failure. It must be labelled as seeded wherever it is s
 - **Why no shell.** The boundary is the settings files: no shell, no web tools, no reads outside the working folder, no connector tools. With a shell, an agent could read your home folder and reach the internet. That was observed before the settings were applied.
 - **The settings files are what the claims depend on.** There are two layers: `.claude/settings.json` in each agent's folder, and `settings.json` in the dedicated config directory. A "settings enforce" row is void if an agent runs in a different folder, and the connector tools come back if it runs under a different config directory. Do the check in Setup step 8 each time.
 - **Each tool is narrow.** `fetch_page` can only GET the sample site on 127.0.0.1 and one port. `replace_text` can only change an existing file directly inside `src/`. `publish` takes no arguments and runs only the site's `publish.mjs`.
-- **Do not admit strangers.** Intake is set to answer anyone in client-desk. How the agents handle a hostile message is convention and is not tested yet. Use a client you know, on a machine you can afford to expose.
+- **Do not admit strangers.** Intake is set to answer anyone in client-desk. How the agents handle a hostile message is convention. Seven hostile messages relayed by the owner were refused or held (`docs/evidence/hostile-2026-11-06.md`); none has been typed by a separate client, and a different message could get a different answer. Use a client you know, on a machine you can afford to expose.
 
 Still open:
 
