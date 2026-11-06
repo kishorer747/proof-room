@@ -43,6 +43,11 @@ In run 3 the builder remembered run 1. It still published once, and wrote in its
 published copy and had not confirmed what the server returns. After this run's rejection it told the owner that publishing
 had twice left the Visit us page on the old text. That is the staged fault seen from the builder's side.
 
+**Use a new team for a seeded run.** Agents keep their memory of a room. Later the same day, at 08:51Z, team `rh4`'s
+builder, having seen the staged fault twice, published twice before saying it was ready, "because one publish has
+twice left Visit us on old text" (`hostile-2026-11-06.md`, test (g)). A second publish clears the staged fault, so on
+that team a third seeded run would likely have shown no rejection.
+
 ## What the client desk received
 
 In each run: intake's acknowledgement, intake's hand-off to the dispatcher, and the reporter's update after approval.

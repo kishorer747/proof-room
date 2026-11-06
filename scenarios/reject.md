@@ -48,4 +48,6 @@ Expected run:
 3. The builder publishes again. The verifier fetches both pages again, and this time PASS.
 4. A named person approves, and the reporter tells the client. The client desk never shows the rejection.
 
+Run it on a newly created team. Agents remember a room, and a builder that has seen the stale page twice starts publishing twice before it hands over, which clears the staged fault.
+
 A seeded run is a staged failure. Label it as seeded in the README, in its evidence transcript and in any video, and never present it as a mistake the builder made unaided.
