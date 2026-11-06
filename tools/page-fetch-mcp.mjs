@@ -2,10 +2,10 @@
 // MCP server with one tool: fetch a page of the sample site, as the verifier's way to see it.
 //   node page-fetch-mcp.mjs [--port N]     or     PORT=N node page-fetch-mcp.mjs
 //
-// Codex runs the verifier's commands with the network off, and MCP servers run outside that
-// sandbox. So this is the verifier's only route to the site, and it is narrow on purpose:
-// GET only, 127.0.0.1 and this one port only, no redirects, and a size cap. The port comes
-// from the person starting the server, never from the agent asking.
+// The verifier has no shell and no web tools. This is its only route to the site, and it is
+// narrow on purpose: GET only, 127.0.0.1 and this one port only, no redirects, and a size
+// cap. The port comes from the person starting the server, never from the agent asking. The
+// FETCHED time is this server's clock, so the verifier does not need a command to get one.
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
@@ -33,12 +33,13 @@ export async function fetchPage(path, port) {
   const buf = Buffer.from(await res.arrayBuffer());
   const body = buf.subarray(0, MAX_BYTES).toString('utf8');
   const truncated = buf.length > MAX_BYTES ? ' truncated' : '';
-  return `GET ${url.pathname}${url.search} -> ${res.status}${truncated}\n\n${body}`;
+  const fetched = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+  return `GET ${url.pathname}${url.search} -> ${res.status}${truncated}\nFETCHED: ${fetched}\n\n${body}`;
 }
 
 const TOOL = {
   name: 'fetch_page',
-  description: 'GET one page of the running sample site and return its status and body.',
+  description: 'GET one page of the running sample site and return its status, the time it was fetched, and its body.',
   inputSchema: {
     type: 'object',
     properties: { path: { type: 'string', description: 'Path on the site, such as /visit.html' } },

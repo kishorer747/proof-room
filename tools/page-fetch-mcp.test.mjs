@@ -36,6 +36,7 @@ after(() => {
 test('returns status and body of a page on the configured port', async () => {
   const text = await fetchPage('/visit.html', port);
   assert.match(text, /^GET \/visit\.html -> 200/);
+  assert.match(text, /^GET \/visit\.html -> 200\nFETCHED: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\n\n/);
   assert.match(text, /method=GET url=\/visit\.html/);
 });
 

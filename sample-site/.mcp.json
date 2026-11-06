@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "site_publish": {
+      "command": "node",
+      "args": ["../tools/site-publish-mcp.mjs"]
+    }
+  }
+}

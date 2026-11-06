@@ -25,10 +25,31 @@ test('no agent bypasses permission checks', () => {
   assert.doesNotMatch(template, /auto_approve:\s*true/);
 });
 
-test('only the verifier is told how to fetch, and it runs on the other vendor', () => {
-  const verifier = template.slice(template.indexOf('- name: "{team}-verifier"'), template.indexOf('- name: "{team}-reporter"'));
-  assert.match(verifier, /provider: codex/);
+const agent = (name, next) =>
+  template.slice(template.indexOf(`- name: "{team}-${name}"`), template.indexOf(`- name: "{team}-${next}"`));
+
+test('only the verifier is told how to fetch, from a folder of its own', () => {
+  const verifier = agent('verifier', 'reporter');
   assert.match(verifier, /fetch_page/);
+  assert.match(verifier, /directory: "\{verifier_dir\}"/);
+  assert.doesNotMatch(template.replace(verifier, ''), /fetch_page/);
+});
+
+test('only the builder is told to publish, and it works in the site folder', () => {
+  const builder = agent('builder', 'verifier');
+  assert.match(builder, /publish tool/);
+  assert.match(builder, /directory: "\{site_dir\}"/);
+  assert.doesNotMatch(template.replace(builder, ''), /publish tool/);
+});
+
+test('no agent is told to run a command', () => {
+  assert.doesNotMatch(template, /`node |`date |curl/);
+});
+
+test('the folder tool configs name one server each', () => {
+  const servers = (rel) => Object.keys(JSON.parse(read(rel)).mcpServers);
+  assert.deepEqual(servers('../sample-site/.mcp.json'), ['site_publish']);
+  assert.deepEqual(servers('../verifier/.mcp.json'), ['page_fetch']);
 });
 
 test('the client is in the client desk and not in the proof room', () => {

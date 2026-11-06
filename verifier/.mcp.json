@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "page_fetch": {
+      "command": "node",
+      "args": ["../tools/page-fetch-mcp.mjs", "--port", "4180"]
+    }
+  }
+}

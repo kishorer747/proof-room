@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(./publish.mjs)",
+      "Edit(./server.mjs)",
+      "Edit(./package.json)",
+      "Edit(./.npmrc)",
+      "Edit(./.mcp.json)",
+      "Edit(./.claude/**)",
+      "Edit(./public/**)"
+    ]
+  }
+}
