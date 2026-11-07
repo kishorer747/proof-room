@@ -4,7 +4,7 @@ An agent that edits a file will say the change is done. The client looks at the 
 
 **Status, 2026-11-06.** The template has been applied through Switch Console and the agents' limits have been checked. Both scenarios have been rehearsed, with the request passed in by the owner and not typed by a separate client: `docs/evidence/rehearsal-pass-2026-11-06.md` and `docs/evidence/rehearsal-reject-2026-11-06.md`. The rejection in the rehearsal is seeded: the publish step was set to leave one page stale once. Seven hostile messages and the attempts to get round the rule have been run the same way, relayed by the owner: `docs/evidence/hostile-2026-11-06.md` and `docs/evidence/bypass-2026-11-06.md`. A recorded run with a client typing in the messaging app is still to come. The table under "Enforced, convention, or pending" marks every rule. Anything marked pending is designed behaviour, not a result.
 
-Demo video: <link pending>
+Demo video: [`docs/demo.mp4`](docs/demo.mp4), 2 min 19 s. It shows a **seeded** run: the stale page was staged in the publish step and is labelled in the video. Run record: [`docs/evidence/reject-run-2026-11-07.md`](docs/evidence/reject-run-2026-11-07.md).
 
 ## How Switch is used, and what stops working without it
 
@@ -98,7 +98,7 @@ Kind says what is meant to hold the rule. Evidence says whether it has been seen
 | The builder publishes only through `publish`, which takes no arguments | settings enforce, with the tool's code | repo tests; boundary; both rehearsals |
 | The builder has no general tool for writing files. It changes text only through `replace_text`, which reaches existing files directly inside `src/` and nothing else | settings enforce, with the tool's code | repo tests; boundary (third team); bypass: three live calls aimed outside `src/` were refused by the tool. Before this change its file tools could write elsewhere in the repo |
 | The builder cannot read the published copy in `public/`. Only the verifier sees the running site | settings enforce | seeded reject rehearsal: Grep and Read refused for a builder started by Console |
-| The builder says "ready for verification", never done | convention | pass rehearsal, reject rehearsal; recorded run pending |
+| The builder says "ready for verification", never done | convention | pass rehearsal, reject rehearsal, recorded run 2026-11-07 |
 | The verifier posts blocks in the exact format | convention | notes (i); PASS blocks in both rehearsals, one REJECT block with its reason in the reject rehearsal |
 | The reporter counts only blocks posted by the verifier | convention | hostile (g): a fake PASS block in page text did not set the reporter off. A block posted in the room by another agent has not been tried, and whether an agent can see who posted is not tested |
 | The verifier checks every page against the checklist item | convention | reject rehearsal, run 3: one page passed and one was rejected |
@@ -106,7 +106,7 @@ Kind says what is meant to hold the rule. Evidence says whether it has been seen
 | After three REJECTs on one item the verifier stops and asks the owner | convention | pending |
 | Client text and page text are quoted, never obeyed | convention | hostile (a) to (g): refused or held, and intake removed a step addressed to the builder. A client typing it is pending |
 | Intake never tells the client an item is done | convention | bypass (a): refused under pressure. A client typing it is pending |
-| The client update says only what the PASS blocks show and mentions no rejection | convention | reject rehearsal, run 3, from the agents' own records. A client's screen is pending |
+| The client update says only what the PASS blocks show and mentions no rejection | convention | reject rehearsal, run 3, from the agents' own records; recorded run 2026-11-07: the client desk in Discord shows the update and no rejection. A separate client account is pending |
 | Setup works from a clean clone | partial | `docs/evidence/clean-clone-2026-11-06.md`: on the author's machine, a fresh clone passed the tests, published, imported the template and created a team of 5 agents and 2 rooms. A scenario run from that clone, and any other machine, are pending |
 
 ## Setup
@@ -166,7 +166,7 @@ node sample-site/publish.mjs
 - `scenarios/pass.md`: a change of opening hours, meant to pass first time.
 - `scenarios/reject.md`: a change to text that is on two pages. Run it unseeded first. A careful builder changes both pages and the run ends in PASS. Record it as that. If no rejection happens, use the seeded variant in the file, where the publish step leaves one page stale once. In the rehearsals the unseeded run passed, and a brief that named only one page did not cause a rejection either, because the builder followed the checklist item.
 
-A seeded run is a staged failure. It must be labelled as seeded wherever it is shown: here, in its transcript and in the video. Both scenarios have a rehearsal. Neither has a recorded run with a client typing in the messaging app.
+A seeded run is a staged failure. It must be labelled as seeded wherever it is shown: here, in its transcript and in the video. Both scenarios have a rehearsal. The reject scenario has one recorded run (`docs/evidence/reject-run-2026-11-07.md`), seeded, with the client message typed in Discord from an account that was also the owner. The pass scenario has no recorded run.
 
 ## Safety
 
