@@ -6,6 +6,8 @@ An agent that edits a file will say the change is done. The client looks at the 
 
 Demo video: [`docs/demo.mp4`](docs/demo.mp4), 2 min 19 s. It shows a **seeded** run: the stale page was staged in the publish step and is labelled in the video. Run record: [`docs/evidence/reject-run-2026-11-07.md`](docs/evidence/reject-run-2026-11-07.md).
 
+Blog post for first-time Switch users: [`docs/blog.md`](docs/blog.md).
+
 ## How Switch is used, and what stops working without it
 
 The whole deployment is one file, `templates/proof-room.template.yaml`. Applying it in Switch Console creates the agents and rooms below. The only other thing you start by hand is the sample site. This section describes the design. The table further down says how much of it has been seen to hold.
