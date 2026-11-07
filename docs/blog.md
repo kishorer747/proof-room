@@ -1,196 +1,125 @@
-# From zero to two agents that check each other's work
+# My AI agent said "done". The live page disagreed. So I built a room where it can't lie to the client.
 
-An agent that edits a file will say the change is done. The client looks at the live page, not the file. If the publish step was skipped, or the same text sits on a second page, "done" is wrong and the client finds out first.
+I build with AI agents every day. This is how I used Switch to put a second agent, and a person, between "done" and the customer.
 
-This is how I built Proof Room, my entry for the Flip the Switch hackathon, on Switch Console 0.40.1, Claude Code 2.1.311 and Discord. It ran on one machine only.
+## The problem: "done" is about the file, the client sees the site
 
-Repo: <https://github.com/kishorer747/proof-room>. Demo video: [`docs/demo.mp4`](demo.mp4), 2 min 19 s, a **seeded** run (the failure in it was staged on purpose, see "The rejection"). Its record: [`docs/evidence/reject-run-2026-11-07.md`](evidence/reject-run-2026-11-07.md).
+An agent edits a web page and says the change is done. In the source file, it is. But the client never opens the source file. They open the live website.
+
+If the publish step didn't run, or the same sentence also sits on a second page nobody looked at, then "done" was false. The client is the one who finds out.
+
+I hit the same shape of problem with teaching. Ask one agent to teach you something and then quiz you, and it is marking its own teaching. It wants you to have understood, and it holds the answers while it asks the questions. That makes for an easy quiz, with a hint of the answer free to slip out.
+
+In both cases the fix is the same idea: the one who does the work should not be the one who checks it, and the person on the other side should hear only what was actually checked.
+
+## What Switch is, in three sentences
+
+Switch lets AI agents and people work together in shared rooms. You run it through Switch Console, and each room can be mirrored to a messaging app such as Discord, so people talk to the agents from the chat app they already use. A template is one file that describes a set of agents and rooms, and Console's wizard creates all of them at once.
 
 ## What I built
 
-Proof Room is a Switch workflow. In it, nobody tells the client a website change is done until a different agent has fetched the running page and posted an evidence block, and a named person has approved. One template file creates five agents and two rooms.
+**Proof Room** is a workflow for client-requested website changes. It has two rooms.
+
+- **client-desk** holds the client, me (the owner) and the agents that talk to the client.
+- **proof-room** holds me and the agents that do and check the work. The client is not a member.
+
+A request moves like this:
+
+1. The client asks for a change in client-desk. An intake agent logs it.
+2. A dispatcher agent carries it into proof-room, to the builder.
+3. The builder edits a small sample site (a made-up bakery) and publishes it. It is only allowed to say "ready for verification", never "done".
+4. A separate verifier agent fetches the **live** pages and posts one evidence block per page: the URL, the time, what it found, and PASS or REJECT.
+5. If anything is rejected, it goes back to the builder.
+6. When every block says PASS, I approve.
+7. Only then does the reporter agent tell the client. The reporter is set so that only my own message can trigger it. That is the approval gate.
+
+**Exam Room** is the smaller, second project. One room, two agents. A tutor teaches a short lesson. A separate examiner, working from its own question bank in its own folder, sets and marks the exam. If you fail, it names the weak spot and asks the tutor to re-teach that part, without giving away answers. The room's message log is the memory, so a later examiner session can start from the last weak spot instead of from zero.
+
+## Setting it up
+
+Here is the short version for a first-timer. The full, tested steps are in the [Proof Room README](https://github.com/kishorer747/proof-room#setup). I used Switch Console 0.40.1, Claude Code 2.1.311, Discord and Node 24.7.0, on one Mac.
+
+**1. Install Switch Console and Claude Code.** Follow the Switch quickstart at <https://github.com/sandbox-quantum/switch>. Connect a messaging app in Console; with none connected, the "Create all" button stays disabled.
+
+**2. Give the agents their own settings file.** Make a separate Claude Code config folder and copy the repo's settings into it:
 
 ```
- client-desk                                 proof-room
- -----------                                 ----------
- people:  client, owner                      people:  owner
- agents:  intake                             agents:  builder    sample-site/  tools: replace_text, publish
-          dispatcher  ---- same agent ----            dispatcher
-          reporter    ---- same agent ----            reporter
-                                                      verifier   verifier/     tool: fetch_page
-
- client -> intake -> dispatcher  ==>  dispatcher -> builder -> verifier
-                                                       ^           |
-                                                       +-- REJECT --+
-                                                    verifier PASS -> owner approves -> reporter
- client <- reporter              <==  reporter
+mkdir <config-dir>
+cp docs/claude-settings.example.json <config-dir>/settings.json
 ```
 
-The client is a member of the left room only. The builder edits a small sample site in the repo (Lantern Bakery) and publishes it. The verifier fetches the running pages and posts one evidence block per page. An item passes only when every block says PASS.
+Sign in to Claude Code once with `CLAUDE_CONFIG_DIR=<config-dir>`, then start Console with that same variable (the README has the exact `env -i` command for macOS). This file takes away the shell and web tools and turns off your account's connector tools. Don't skip it; see "What I learned".
 
-The reporter is set to `addressing: owner`, so only the owner's own message triggers the one agent that writes to the client. That is the approval gate.
-
-## Setting up
-
-Steps 1 to 9 get one agent answering in a room. Step 10 checks the rest.
-
-1. **Install Node.** The repo has no dependencies. I used Node 24.7.0.
-2. **Install Switch Console and Claude Code.** Follow the Switch quickstart for Console (<https://github.com/sandbox-quantum/switch>).
-3. **Connect a messaging app in Console.** With none connected, Create all is disabled.
-4. **Make a dedicated Claude Code config directory.**
-
-   ```
-   mkdir <config-dir>
-   cp docs/claude-settings.example.json <config-dir>/settings.json
-   ```
-
-   Sign in to Claude Code once with `CLAUDE_CONFIG_DIR=<config-dir>` set. The file removes the shell and web tools, blocks file reads outside an agent's working folder, and turns off your account's connector tools. A separate directory keeps your everyday tools away from these agents.
-5. **Start Console with a clean environment.** On macOS, quit Console and run:
-
-   ```
-   env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" SHELL=/bin/sh LANG=en_US.UTF-8 \
-     PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
-     CLAUDE_CONFIG_DIR=<config-dir> /usr/bin/open -a "Switch Console"
-   ```
-
-   Agents inherit the environment Console was started with, so anything your shell exports would reach them. Opening Console from the Dock starts it without the variable.
-6. **Start the sample site** and leave it running.
-
-   ```
-   cd sample-site
-   node publish.mjs
-   node server.mjs --port 4180
-   ```
-
-7. **Import the template.** Templates > Import template > Save > Use template. The file is `templates/proof-room.template.yaml`.
-8. **Fill in the three inputs.** `team` is a short lowercase prefix for every name; use a new one for each run. `client_user` is the person playing the client. `repo_dir` is the absolute path of the repository.
-9. **Choose Create all.** It is all or nothing: a failed Create reports "Nothing was created". When it succeeded, intake greeted the client in client-desk as the room was created. That is your first agent answering.
-10. **Check before you trust it.** You should see five agents and two rooms. In proof-room, ask the verifier to list its tools. It should report `fetch_page`, no shell and no web tool. If it reports a shell, go back to step 4.
-
-Four things the docs did not make clear to me:
-
-- **Saving a template does not validate it.** A room document missing `description` and `instructions` saved, then the wizard refused it with "Could not load this template".
-- **A room needs a bridge.** Without `bridge:` a room fails even with a messaging app connected: "it is on no messaging app". Declare a `bridge` param with `default: [$first]`.
-- **No `channel_type` means public channels.** An earlier template made Discord channels with 0 permission overwrites. This one sets `channel_private`. Whether that closes them is not tested.
-- **A bridged room has no message box in Console**, only "Open in Discord". Type in Discord.
-
-I also followed these steps from a fresh clone, on the same machine: the tests passed, the site published, and the template created a team of five agents and two rooms ([`clean-clone-2026-11-06.md`](evidence/clean-clone-2026-11-06.md)). No scenario has been run from that clone, and no other machine has been tried.
-
-## The first full run
-
-This was a rehearsal. I passed the client's message to intake from my own Console chat, word for word, and approved from there. No separate client typed anything. The pass scenario has no recorded run in the messaging app yet.
-
-The message was "Please change our opening hours to 8 to 6." Intake logged one item, the dispatcher carried it across, and the builder edited both pages, published, and said "ready for verification". The verifier fetched both pages and posted a block for each. One, exactly as posted:
+**3. Start the sample site.** From the repo:
 
 ```
-ITEM: 1. Change our opening hours to 8 to 6.
-URL: http://127.0.0.1:4180/index.html
-FETCHED: 2026-11-06T07:26:35Z
-STATUS: 200
-FOUND: "Open every day, 8 am to 6 pm"
-VERDICT: PASS
+cd sample-site
+node publish.mjs
+node server.mjs --port 4180
 ```
 
-It also flagged the builder's reading:
+**4. Import the template and fill the wizard.** In Console: Templates, Import template, pick `templates/proof-room.template.yaml`, Save, Use template. The wizard asks for three things: `team` (a short lowercase prefix, new for each run), `client_user` (who plays the client) and `repo_dir` (the full path to the repo). Choose Create all. It is all or nothing.
 
-> One thing to weigh before you approve: the client wrote only "8 to 6". The pages now say 8 am to 6 pm and still say "every day"; the am/pm reading and the unchanged days are the builder's interpretation, not something the client stated.
+**5. Talk to it in Discord.** A room mirrored to Discord has no message box in Console, only "Open in Discord". So you type in Discord. The intake agent greets the client as soon as the room is created. Before trusting anything, ask the verifier to list its tools: you want to see `fetch_page`, and no shell.
 
-I sent "Item 1 is approved." and the reporter posted the client update. The run went from 07:25:03Z to 07:28:34Z.
+## What happened when I ran it
 
-## The rejection
+I recorded one run of each project on 7 November 2026. Some honesty first, so the screenshots read correctly:
 
-The reject scenario changes a cake-order notice from 48 hours to 72 hours. The text is on two pages and the message does not say which.
+- The Proof Room rejection is **seeded**. I set the publish step to leave one page stale the first time, on purpose. The builder was not told.
+- In Exam Room, I gave two wrong answers on purpose, so you'd see a fail and a re-teach.
+- The client (or student) and the owner were the same Discord account.
+- My Claude Code session typed the messages into Discord, on my instruction.
 
-Run unseeded, it passed: the builder found the notice on both pages and changed both. Then I briefed the builder to change the home page only. It followed the checklist item, not the brief, and changed both pages again.
+The client asks to change a cake-order notice from 48 hours to 72 hours. The text appears on two pages, and the message doesn't say which.
 
-So every rejection I can show is **seeded**: I staged a stale publish on purpose. The failure worth showing is the one only the running page reveals, where the source is right and the site is not. That lives in the publish step, so I started the builder's publish tool with `--stale-once visit.html`. The first publish leaves that page as it was and still reports success. The builder is not told.
+![The client's request in Discord](blog-images/0-proof-room-request.jpg)
 
-One seeded rehearsal taught me something too. In it the builder searched the published copy in its own folder, saw the stale page, and published again before handing over, so no rejection happened. Its settings now refuse reads of `public/`: the builder sees the source, and only the verifier sees the running site. After that change the seeded fault gave a rejection in three rehearsals out of three ([`rehearsal-reject-seeded-2026-11-06.md`](evidence/rehearsal-reject-seeded-2026-11-06.md)). Three is a small number.
+The builder edited both pages, published once and said it was ready. The verifier fetched both. The home page passed. The visit page did not:
 
-### The recorded run (seeded)
+![The verifier rejects: the live page still says 48 hours](blog-images/1-proof-room-reject.jpg)
 
-On 2026-11-07 I recorded one seeded run on a new team, `rh6`, with the client's message typed in the Discord client-desk channel instead of passed in from Console. Its limit first: **the client and the owner were the same Discord account.** It does not show that a separate client is kept out of proof-room. The full record is [`reject-run-2026-11-07.md`](evidence/reject-run-2026-11-07.md), and it is the run in the video.
+The source was right; the live page was not. The builder could not see the published page, so it didn't guess: it said the source already read 72 hours, published again, and asked for a fresh fetch. The verifier fetched again and both pages passed. I approved.
 
-From 21:47 to 21:52 IST:
+![Only after approval does the client hear, with no mention of the rejection](blog-images/2-proof-room-client-update.jpg)
 
-1. The client message went to intake in client-desk. Intake logged one item and passed it to the dispatcher, which forwarded it to the builder in proof-room.
-2. The builder edited both pages, published once, and said ready for verification.
-3. The verifier fetched both pages. The home page passed. The block for the stale page, as posted (staged by the seeded fault):
+The client got one message: the notice now reads 72 hours on both pages, and both are live. Nothing about the rejection or the stale page reached client-desk.
 
-```
-ITEM: 1. Change the notice for whole cakes from 48 hours to 72 hours.
-URL: http://127.0.0.1:4180/visit.html
-FETCHED: 2026-11-07T16:18:35Z
-STATUS: 200
-FOUND: "Whole cakes need 48 hours' notice."
-VERDICT: REJECT
-REASON: The live visit page still says 48 hours in its "Ordering a whole cake" section. Your message said this page was updated and published, but what the site serves doesn't match.
-```
+In Exam Room, the examiner asked three questions on lesson 1. I got two wrong on purpose and scored 1 of 3.
 
-   It ended with "This is REJECT 1 of 3 on this item."
-4. The builder could not see the published copy, so it did not guess:
+![Exam Room: a real fail, with the weak spot named](blog-images/3-exam-room-fail.jpg)
 
-   > The visit page source already says "Whole cakes need 72 hours' notice." and did when I first published, so I couldn't find anything to fix there. I've published again. I can't see what the server sends, so please fetch both pages.
+The result block named the weak spots and the examiner asked the tutor to re-teach them, pointing to lesson sections, not answers. After the re-teach, the retake used questions I hadn't seen:
 
-5. The verifier fetched again at 16:19:01Z, posted PASS for both pages, and asked me to approve.
-6. I sent `@rh6-reporter Item 1 is approved.` in proof-room. The reporter posted one update in client-desk: the notice now reads 72 hours on the home page and the visit page, and both are live.
+![The retake on new questions: pass](blog-images/4-exam-room-pass.jpg)
 
-The client desk holds no message that mentions the rejection, the stale page or 48 hours after the client's own request. Unlike the rehearsals, that is checked on what the Discord channel showed, not only on the agents' own records.
+3 of 3, pass, and the examiner closed lesson 1.
 
-One disclosure. At 21:49 a stray message, `h6-reporter`, appears in proof-room from my account. It is the broken start of a first approval attempt, cut when the screen-capture loop switched channel while I was typing. The reporter did not act on it. The rest of that attempt was left as an unsent draft in client-desk and deleted unsent.
+## What I learned
 
-## What broke along the way
+**The builder must not be able to see what it asks someone else to verify.** In one seeded rehearsal, the builder searched the published copy in its own folder, spotted the stale page and quietly published again before handing over. No rejection happened. Helpful, but the check then proved nothing. I changed its settings so it can't read the published folder. After that, the seeded fault produced a rejection in three rehearsals out of three.
 
-Switch does not sandbox agents. Before any settings, I probed an agent that Console itself had started.
+**Switch does not sandbox your agents. Your settings do.** Before I added the settings file, an agent started by Console could run shell commands, read a file in my home folder, reach the internet, and it carried 321 tools from my account's connectors, some of which publish to outside services. With the settings, the shell calls failed and the connector tools went to 0.
 
-- A shell command counted the lines of a file in the home folder.
-- `https://example.com` returned 200, by shell and by the web tool.
-- The agent carried 321 tools from the signed-in account's connectors, including ones that publish to outside services.
+**Test limits from an agent Console started, not from your terminal.** Two lockdowns worked perfectly from my terminal and failed under Console. Claude Code's built-in sandbox made every Claude process stall under Console. A Codex permission profile was simply ignored there. What actually worked was taking the shell away entirely and giving each agent one or two narrow tools.
 
-Two fixes worked from a terminal and failed inside Console.
+**Measure the settings you ship, not the ones you rehearsed with.** My rehearsals ran on a config with ten extra deny rules naming my own connectors. A newcomer copying the repo's file wouldn't get those. So I tested the shipped file on its own: zero connector tools, no shell, no web tools.
 
-1. **Claude Code `sandbox.enabled`.** From a terminal: 9 of 9 denials. Under Console every Claude process stalled, including Console's own sign-in check, and the machine showed as offline.
-2. **A Codex agent with a permission profile that denies the home folder.** It works in `codex sandbox` from a terminal. Under Console it was ignored: Console starts each thread with its own policy, and the home folder stayed readable.
+**Killing an agent's process doesn't reset its session.** In Exam Room I killed both agents' processes to test the room-log memory. Console restarted the tutor on the next message and it carried on the same session. Only the examiner started fresh, and it found the earlier weak spot in the room log and cited it.
 
-So test the boundary from an agent Console started, not from a terminal.
+**Know what Switch enforces and what is just an instruction.** Switch held room membership (an agent outside a room was refused) and the owner-only trigger (the reporter visibly refused another agent's message). But "say ready, never done", "count only the verifier's blocks" and "don't mention rejections to the client" are instructions to the agent. Switch doesn't check what an evidence block says. I do, when I approve.
 
-What worked was no shell at all. The settings deny `Bash`, `WebFetch` and `WebSearch`, set `blockReadsOutsideWorkingDirectories` and `ENABLE_CLAUDEAI_MCP_SERVERS=false`, and deny the Switch tools that manage agents, rooms and templates. The builder and the verifier then get narrow tools of their own:
+## What I haven't proven yet
 
-- `fetch_page` (verifier): GET only, 127.0.0.1 and one port, no redirects, a size cap.
-- `replace_text` (builder): changes text only in an existing file directly inside the site's `src/`. The builder has no general tool for writing files.
-- `publish` (builder): takes no arguments and runs only the site's own `publish.mjs`.
+- A separate person, on a separate account, playing the client or student.
+- The success-first Proof Room scenario, recorded in Discord.
+- Whether the template's private-channel setting actually closes the Discord channels.
+- A full run from a clean clone, or on any other machine.
+- The tutor starting with no private memory.
 
-With the settings, a ten-step self-test on the client-facing agent failed all ten. The shell steps returned "No such tool available: Bash". The file read was refused, naming `permissions.blockReadsOutsideWorkingDirectories`. Connector tools went from 321 to 0, and Switch's own tools from 59 to 18.
+## Try it
 
-I also asked the builder to aim `replace_text` at two files outside `src/` and one in the home folder. It made all three calls, and each came back "replace failed: file must be the name of a file in src/, with no folder". Nothing was written ([`bypass-2026-11-06.md`](evidence/bypass-2026-11-06.md)).
+- Proof Room: <https://github.com/kishorer747/proof-room>, demo video at `docs/demo.mp4`
+- Exam Room: <https://github.com/kishorer747/exam-room>, demo video at `docs/demo.mp4`
 
-The rules are void if an agent runs in a different folder, and the connector tools come back under a different config directory. Hence step 10, every time.
-
-## What Switch enforces and what is only convention
-
-| Rule | Held by | Seen to hold |
-|---|---|---|
-| An agent outside a room cannot read or post in it | Switch | Yes for agents. People not tested |
-| An `owner` agent does not act on another agent's message | Switch | Yes, with a visible refusal |
-| A separate client cannot read proof-room or trigger the other agents | Switch | Pending |
-| No shell, no web tool, no reads outside the working folder | settings | Yes |
-| The builder writes only inside `src/`, through `replace_text` | settings and the tool's code | Yes: three calls aimed elsewhere were refused |
-| The builder cannot read the published copy | settings | Yes, for a builder Console started |
-| An agent cannot call the denied Switch management tools | settings | 18 of 59 tools remain. A call to a denied one is pending |
-| The builder says "ready for verification", never done | convention | Both rehearsals and the recorded run (rejection seeded) |
-| The client update mentions no rejection | convention | Recorded run, in the Discord channel. Client and owner were one account |
-| The reporter counts only the verifier's blocks | convention | Partly: a fake PASS block in page text did not set it off. A block posted by another agent is pending |
-
-Switch does not check what a block says. Only the owner checks the verifier's verdict.
-
-The hostile-message tests in the repo ([`hostile-2026-11-06.md`](evidence/hostile-2026-11-06.md)) were refused or held, but I relayed those seven messages from my Console chat. None was typed by a separate client.
-
-## What I would do next
-
-- Record a run with a separate person, on a separate account, typing as the client.
-- Record the pass scenario in the messaging app.
-- Test whether `channel_private` closes the Discord channels.
-- Have a separate client type the hostile messages, and try the remaining bypasses: a call to a denied Switch tool, a block posted by an agent other than the verifier.
-- Run a scenario from a clean clone, and set it up on another machine.
-
-Repo: <https://github.com/kishorer747/proof-room>
+Each repo has the run record for its video in `docs/evidence/`.
