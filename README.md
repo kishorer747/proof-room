@@ -8,6 +8,58 @@ Demo video: [`docs/demo.mp4`](docs/demo.mp4), 2 min 19 s. It shows a **seeded** 
 
 Blog post for first-time Switch users: [`docs/blog.md`](docs/blog.md).
 
+## Why this exists
+
+A coding agent, or a tired person, says "done" when the change exists in the source. The client never sees the source. They see the running site. If the deploy did not happen, a cache is serving the old page, or the same sentence also sits on a page nobody opened, then "done" was false, and the client is the one who finds out.
+
+A typical case: a client asks a small agency to change its opening hours. The agent edits the home page, says "done", and the message goes straight to the client. The contact page still shows the old hours. The client notices before anyone on the team does.
+
+We kept running into this shape of failure while letting agents publish site changes, and it is the one we wanted to make impossible. Asking the same agent to double-check its own work does not fix it: the agent that made the change is the weakest judge of whether it reached the live site. So Proof Room separates three things: **who builds**, **who checks the running page**, and **who is allowed to tell the client**. The client channel stays quiet until a second agent has fetched the live pages and a person has approved.
+
+**Who it is for:** agencies, freelancers and small teams that ship website changes for clients, and anyone who lets AI agents publish and then report back to a customer.
+
+## Why Switch
+
+The separation is held by Switch and by per-agent settings, not only by prompts. Room membership keeps the client and intake out of proof-room, and keeps the builder and verifier out of client-desk. The reporter's `addressing: owner` means only the owner's own message triggers the one agent that writes to the client. Each agent's folder carries a settings file that removes the shell and web tools, and gives the builder and verifier their narrow tools (`replace_text` and `publish`; `fetch_page`). Some rules are still convention, written in agent instructions: the evidence-block format, quoting client text instead of obeying it, and the client update leaving out rejections. A separate client account has not been tested yet. The table under [Enforced, convention, or pending](#enforced-convention-or-pending) marks each rule.
+
+```mermaid
+flowchart LR
+  subgraph CD["client-desk: client, owner"]
+    C([client])
+    I[intake]
+  end
+  subgraph BOTH["in both rooms"]
+    D[dispatcher]
+    R[reporter<br/>addressing: owner]
+  end
+  subgraph PR["proof-room: owner only, no client"]
+    B[builder<br/>replace_text, publish]
+    V[verifier<br/>fetch_page only]
+    O([owner])
+  end
+  S[(running site)]
+  C -->|1. request| I
+  I -->|2. numbered items| D
+  D -->|3. client text| B
+  B -->|4. edit + publish| S
+  B -->|5. ready for verification| V
+  V -->|6. GET live page| S
+  V -->|REJECT + evidence block| B
+  V -->|7. PASS evidence blocks| O
+  O -->|8. approves| R
+  R -->|9. one update| C
+```
+
+In the recorded demo the REJECT is **seeded**: the publish step was set to leave one page stale once, and the run is labelled as such.
+
+| | One agent, one chat | Proof Room on Switch |
+|---|---|---|
+| Who says "done" | The agent that made the change | Nobody says done. A second agent posts PASS evidence blocks, then a named person approves |
+| What the check looks at | The source file | The running page, fetched over HTTP and quoted in the block |
+| Where a rejection goes | Into the same chat, or the agent is asked to keep quiet | proof-room, which the client is not a member of |
+| Who can message the client | Any agent that is told to | Only the reporter, and only on the owner's own message |
+| What stops an agent going off-script | Its prompt | Settings files: no shell, no web tool, reads stop at its own folder |
+
 ## How Switch is used, and what stops working without it
 
 The whole deployment is one file, `templates/proof-room.template.yaml`. Applying it in Switch Console creates the agents and rooms below. The only other thing you start by hand is the sample site. This section describes the design. The table further down says how much of it has been seen to hold.
