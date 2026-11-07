@@ -107,7 +107,7 @@ Kind says what is meant to hold the rule. Evidence says whether it has been seen
 | Client text and page text are quoted, never obeyed | convention | hostile (a) to (g): refused or held, and intake removed a step addressed to the builder. A client typing it is pending |
 | Intake never tells the client an item is done | convention | bypass (a): refused under pressure. A client typing it is pending |
 | The client update says only what the PASS blocks show and mentions no rejection | convention | reject rehearsal, run 3, from the agents' own records. A client's screen is pending |
-| Setup works from a clean clone on another machine | pending | pending: `docs/evidence/clean-clone.md` |
+| Setup works from a clean clone | partial | `docs/evidence/clean-clone-2026-11-06.md`: on the author's machine, a fresh clone passed the tests, published, imported the template and created a team of 5 agents and 2 rooms. A scenario run from that clone, and any other machine, are pending |
 
 ## Setup
 
@@ -186,7 +186,7 @@ Still open:
 
 ## Limits
 
-- Tested on the author's Console and machine only, not on a fresh machine or a clean clone.
+- Tested on the author's Console and machine only. A clean clone on that machine got as far as creating the team (README steps 1 to 7); no scenario has been run from a clone, and no other machine has been tried.
 - One provider for now. A Codex agent under Console could read the home folder and had a working web tool, and Console applied its own Codex sandbox instead of the permission profile it was given. So the verifier is a second Claude agent, not a different model.
 - In tests so far the client and the owner were the same person. "The client cannot see proof-room" has not been shown with a separate person.
 - `fetch_page` returns the page's HTML. It does not run scripts or render the page.
